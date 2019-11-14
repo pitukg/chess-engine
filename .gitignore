@@ -1,0 +1,12 @@
+#ignore project file
+*.sublime-project
+*.sublime-workspace
+
+#ignore all object files
+*.o
+
+#ignore executable
+tester
+
+#Mac OS X
+.DS_Store
