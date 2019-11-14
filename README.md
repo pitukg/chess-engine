@@ -21,6 +21,7 @@ Position 1
 197281  ... OKAY
     time: 0.051997ms     nps: 3794084.274093
 `
+
 `
 Position 2
 48  ... OKAY
@@ -32,6 +33,7 @@ Position 2
 4085603 ... OKAY
     time: 0.911888ms     nps: 4480378.072746
 `
+
 `
 Position 3
 14  ... OKAY
@@ -43,6 +45,7 @@ Position 3
 43238   ... OKAY
     time: 0.006245ms     nps: 6923618.895116
 `
+
 `
 Position 4
 6   ... OKAY
@@ -54,6 +57,7 @@ Position 4
 422333  ... OKAY
     time: 0.094971ms     nps: 4446968.021817
 `
+
 `
 Position 5
 44  ... OKAY
@@ -65,6 +69,7 @@ Position 5
 2103487 ... OKAY
     time: 0.472868ms     nps: 4448359.795968
 `
+
 `
 Position 6
 46  ... OKAY
