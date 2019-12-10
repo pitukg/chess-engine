@@ -65,6 +65,8 @@ static const U64 emptySquaresForQueensideCastling[2] = {(1ll<<d1 | 1ll<<c1 | 1ll
 U64 attacks_to_square(const Board *board, SquareCode square, Color attackedBy);
 U64 attacks_to_king(const Board *board, Color colorOfKing);
 
+ // utility for static exchange evaluation
+SquareCode smallest_attacker(const Board *board, SquareCode square, PieceType *pieceToReturn);
 
 
 // type for encoding a chess move

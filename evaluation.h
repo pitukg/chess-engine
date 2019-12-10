@@ -6,6 +6,7 @@
 
 
 #include "board.h"
+#include "stack.h"
 
 // FOR NOW WE USE THE OPEN-SOURCE "SIMPLE EVALUATION FUNCTION" FROM CHESSPROGRAMMING.ORG
 // see: "https://www.chessprogramming.org/Simplified_Evaluation_Function" as of 2019
@@ -182,6 +183,9 @@ static const Score kingEndgamePieceSquareTable[] = {
 
 Score evaluate(Board *board);
 
+Score static_exchange_evaluation(SquareCode square, Board *board, Stack *stack);
+
+Score capture_static_evaluation(SquareCode from, SquareCode to, Board *board, Stack *stack);
 
 #endif
 

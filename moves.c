@@ -144,6 +144,25 @@ U64 attacks_to_square(const Board *board, SquareCode square, Color attackedBy) {
 }
 
 
+SquareCode smallest_attacker(const Board *board, SquareCode square, PieceType *pieceToReturn) {
+
+    Color sideToAttack = board->meta.sideToMove;
+    U64 attackers = attacks_to_square(board, square, sideToAttack);
+
+    for (PieceType pt = (PieceType)sideToAttack; pt < 13; pt += 2) {
+        U64 attackerPieces = board->pieceBB[pt] & attackers;
+        if (attackerPieces) {
+            *pieceToReturn = pt;
+            return bitscan_forward(attackerPieces);
+        }
+    }
+
+    *pieceToReturn = none;
+    return 0ll;
+
+}
+
+
 // used for `lazy` move legality checking: the move wasn't legal if opponent can take the king now
 extern inline U64 attacks_to_king(const Board *board, Color colorOfKing) {
     return attacks_to_square(board, board->kingSquare[colorOfKing], !colorOfKing);
