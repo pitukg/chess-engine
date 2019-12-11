@@ -5,7 +5,8 @@
 
 #define BOARD_H
 
-// TYPES 
+// TYPES
+
 
 // type for 64 bit bitboards
 typedef long long U64;
@@ -87,6 +88,8 @@ struct Board {
     } meta;
     // evaluation score of current position
     Score score;
+    // hash -- incrementally updated using Zorbist technique
+    U64 hash;
 
 };
 typedef struct Board Board;

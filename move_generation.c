@@ -1,4 +1,5 @@
 #include "move_generation.h"
+#include "transposition.h"
 
 // utility for nonpawn move generation
 static Move *append_nonpawn_moves_from_attack_set(Move *moveList, SquareCode from, U64 attacks, const U64 *occupied, const U64 *ours);
@@ -259,18 +260,39 @@ void make_move(Board *board, Move move, Stack *stack) {
     SquareCode from = get_from(move), to = get_to(move);
     PieceType pt = board -> pieceCode[from];
 
-
+    // flip side to move in hash
+    board->hash ^= zobristKeys.flipSideToMove;
     // turn off castling ability after a rook or king move
+    // first flip current rights in hash
+    board->hash ^= zobristKeys.flipKingsideCastlingRight[board -> meta.kingsideCastlingRight[color]];
+    board->hash ^= zobristKeys.flipQueensideCastlingRight[board -> meta.queensideCastlingRight[color]];
     if (pt == (color ? bKing : wKing))
         board -> meta.kingsideCastlingRight[color] = board -> meta.queensideCastlingRight[color] = 0;
     else if (from == (color ? a8 : a1))
         board -> meta.queensideCastlingRight[color] = 0;
     else if (from == (color ? h8 : h1))
         board -> meta.kingsideCastlingRight[color] = 0;
+    // now hash current values
+    board->hash ^= zobristKeys.flipKingsideCastlingRight[board -> meta.kingsideCastlingRight[color]];
+    board->hash ^= zobristKeys.flipQueensideCastlingRight[board -> meta.queensideCastlingRight[color]];
+
+    // flip old en passant squares in hash, note this bitboard gets discarded so we can modify
+    if (board->meta.enPassantTargets) do {
+        SquareCode epSquare = bitscan_forward(board->meta.enPassantTargets);
+        board->hash ^= zobristKeys.enPassantSquare[epSquare];
+    } while (board->meta.enPassantTargets &= (board->meta.enPassantTargets - 1));
+
 
     // setting the en passant target square after double push
     board -> meta.enPassantTargets = ((move & moveKindFlag) == doublePushFlag) ?
             (1ll << ((get_from(move) + get_to(move)) / 2)) : 0ll;
+
+    // flip new en passant squares in hash, note we can't currently modify the bitboard
+    U64 newEpTargets = board->meta.enPassantTargets;
+    if (newEpTargets) do {
+        SquareCode epSquare = bitscan_forward(newEpTargets);
+        board->hash ^= zobristKeys.enPassantSquare[epSquare];
+    } while (newEpTargets &= (newEpTargets - 1));
 
     // handling castles
     if ((move & moveKindFlag) == kingsideCastleFlag) {
@@ -368,6 +390,26 @@ void unmake_move(Board *board, Move move, Stack *stack) { // color is whose move
 
     SquareCode from = get_from(move), to = get_to(move);
     PieceType pt = board -> pieceCode[to];
+
+    // flip side to move in hash
+    board->hash ^= zobristKeys.flipSideToMove;
+    // flip new en passant squares in hash
+    // note new current en passant fields are discarded so modification is allowed
+    if (board->meta.enPassantTargets) do {
+        SquareCode epSquare = bitscan_forward(board->meta.enPassantTargets);
+        board->hash ^= zobristKeys.enPassantSquare[epSquare];
+    } while (board->meta.enPassantTargets &= (board->meta.enPassantTargets - 1));
+    // flip old en passant squares in hash, note modification is not allowed
+    U64 oldEpTargets = stObj.meta.enPassantTargets;
+    if (oldEpTargets) do {
+        SquareCode epSquare = bitscan_forward(oldEpTargets);
+        board->hash ^= zobristKeys.enPassantSquare[epSquare];
+    } while (oldEpTargets &= (oldEpTargets - 1));
+    // reset castling right hashes
+    board->hash ^= zobristKeys.flipKingsideCastlingRight[board -> meta.kingsideCastlingRight[color]];
+    board->hash ^= zobristKeys.flipQueensideCastlingRight[board -> meta.queensideCastlingRight[color]];
+    board->hash ^= zobristKeys.flipKingsideCastlingRight[stObj.meta.kingsideCastlingRight[color]];
+    board->hash ^= zobristKeys.flipQueensideCastlingRight[stObj.meta.queensideCastlingRight[color]];
 
 
     if ((move & moveKindFlag) == kingsideCastleFlag) {

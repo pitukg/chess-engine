@@ -1,5 +1,6 @@
 #include "board.h"
 #include "evaluation.h"
+#include "transposition.h"
 
 
 // returns the bit at square-th position // only print uses this
@@ -19,7 +20,7 @@ inline void bb_set_false(U64 * bitboard, SquareCode square) {
 
 // function for adding a piece to the board
 void add_piece(Board * board, PieceType pt, SquareCode square) {
-    Color col = (pt == wPawn || pt == wKing || pt == wQueen || pt == wRook || pt == wBishop || pt == wKnight) ? WHITE : BLACK; // TODO: refactor
+    Color col = (pt == wPawn || pt == wKing || pt == wQueen || pt == wRook || pt == wBishop || pt == wKnight) ? WHITE : BLACK; // TODO: refactor, maybe mod 2
     board -> pieceCode[ square ] = pt;
     bb_set_true( &(board -> pieceBB[ pt ]), square );
     bb_set_true( &(board -> occupied), square );
@@ -27,6 +28,9 @@ void add_piece(Board * board, PieceType pt, SquareCode square) {
     // update board score
     board->score += pieceScore[ pt ];
     board->score += pieceSquareTable[ pt ][ square ];
+    // update board hash
+    board->hash ^= zobristKeys.pieceAtSquare[ pt ][ square ];
+    // update king position
     if (pt == wKing) board -> kingSquare[WHITE] = square;
     else if (pt == bKing) board -> kingSquare[BLACK] = square;
 }
@@ -41,6 +45,8 @@ void remove_piece(Board * board, PieceType pt, SquareCode square) {
     // update board score
     board->score -= pieceScore[ pt ];
     board->score -= pieceSquareTable[ pt ][ square ];
+    // update board hash
+    board->hash ^= zobristKeys.pieceAtSquare[ pt ][ square ];
 }
 
 
@@ -99,6 +105,8 @@ void init_board(Board *board) {
     board->meta.halfmoveClock = 0;
     board->meta.fullmoveCounter = 1;
     board->score = 0;
+    // note initial hash value is not important, just setting it to some constant value
+    board->hash = 0ll;
 }
 
 int is_digit(char c) {

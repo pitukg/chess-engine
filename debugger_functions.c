@@ -5,6 +5,7 @@
 #include "moves.h"
 #include "move_generation.h"
 #include "evaluation.h"
+#include "search.h"
 
 const char pieceToStringArr[13][8] = {
     "wPawn",
@@ -218,6 +219,26 @@ void perft_check() {
 
 
 
+void eval_testing() {
+    char FENs[5][100] = {
+        "rnbqkb1r/1p3ppp/p2ppn2/8/3NP3/2N1BP2/PPP3PP/R2QKB1R b KQkq - 0 7",
+        "rn1qkb1r/1p3ppp/p2pbn2/4p3/4P3/1NN1BP2/PPP3PP/R2QKB1R b KQkq - 0 8",
+        "rnbqkb1r/1p3ppp/p2ppn2/8/3NP3/2N5/PPP1BPPP/R1BQK2R w KQkq - 0 7",
+        "r1bqk2r/1p2bpp1/p1nppn1p/8/3NP3/2N1B3/PPPQ1PPP/2KR1B1R w kq - 0 10",
+        "r1bqkb1r/5ppp/p1np1n2/1p2p1B1/4P3/N1N5/PPP2PPP/R2QKB1R w KQkq b6 0 9",
+    };
+    for (int pos = 0; pos < 5; pos++) {
+        Board board = parse_FEN(FENs[pos]);
+        Stack stack;
+
+        Move bestMove;
+        printf("position score: %.2f (relative to side to move)\n",
+                (double)alphaBeta(-30000, +30000, 5, &board, &stack, &bestMove) / 100.);
+
+    }
+}
+
+
 
 // UNIT TESTS
 
@@ -315,6 +336,16 @@ void check_test(char *FEN) {
     printf("The black king is %sin check.\n", ((attacks_to_king(&board, BLACK) != 0ll) ? "" : "not "));
 }
 
+
+void smallest_attacker_test() {
+
+    Board board = parse_FEN("3K4/3R4/8/4B3/r2p2Q1/8/3q4/2kr4 w - - 0 1");
+    PieceType smallestWhite, smallestBlack;
+    (void)smallest_attacker(&board, d4, &smallestWhite);
+    board = parse_FEN("3K4/3R4/8/4B3/r2p2Q1/8/3q4/2kr4 b - - 0 1");
+    (void)smallest_attacker(&board, d4, &smallestBlack);
+    printf("w: %s\nb: %s\n", piece_to_string(smallestWhite), piece_to_string(smallestBlack));
+}
 
 
 
