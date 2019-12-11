@@ -235,9 +235,9 @@ Move *generate_pawn_moves(Move *moveList, Color color, const Board *board) {
 
 Move *generate_pseudolegal_moves(Move *moveList, Color color, const Board* board) {
 
-    moveList = generate_castling_moves(moveList, color, board);
-    moveList = generate_nonpawn_moves(moveList, color, board);
     moveList = generate_pawn_moves(moveList, color, board);
+    moveList = generate_nonpawn_moves(moveList, color, board);
+    moveList = generate_castling_moves(moveList, color, board);
 
     return moveList;
 

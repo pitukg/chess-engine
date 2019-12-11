@@ -230,10 +230,11 @@ void eval_testing() {
     for (int pos = 0; pos < 5; pos++) {
         Board board = parse_FEN(FENs[pos]);
         Stack stack;
-
-        Move bestMove;
+        PrincipalVariation pv;
+        pv.depth = 0;
+        memset(pv.root, 0, 512);
         printf("position score: %.2f (relative to side to move)\n",
-                (double)alphaBeta(-30000, +30000, 5, &board, &stack, &bestMove) / 100.);
+                (double)iterate(&board, &stack, &pv) / 100.);
 
     }
 }

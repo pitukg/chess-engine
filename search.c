@@ -2,57 +2,108 @@
 #include "moves.h"
 #include "move_generation.h"
 #include "transposition.h"
-#include <stdlib.h>
+
+#define NUM_MOVES_MAX (10000)
 
 
-Score alphaBeta(Score alpha, Score beta, int depthLeft, Board *board, Stack *stack, Move *bestMoveBuffer) {
-    // bestMoveBuffer must be a valid pointer
-    *bestMoveBuffer = 0;// note that 0 is not a legal move, so if we are left with 0 no changes were made
+
+static Move *sort_move_list(Move *moveListBegin, Move *moveListEnd, Move *sortedListBegin,
+                                        int depthLeft, PrincipalVariation *pv, Board *board, Stack *stack);
+
+
+Score iterate(Board *board, Stack *stack, PrincipalVariation *pv) {
+    // TODO: ponder, time mgmt
+
+    Score lastScore = 0;
+
+    for (int depth = 0; depth < 5; depth++) {
+        Score itScore = alphaBeta(-30000, +30000, depth, board, stack, pv);
+        lastScore = itScore;
+        pv->depth++;
+    }
+
+    return lastScore;
+}
+
+
+
+Score alphaBeta(Score alpha, Score beta, int depthLeft, Board *board, Stack *stack, PrincipalVariation *pv) {
 
     if (depthLeft == 0) {
         return quiesce(alpha, beta, board, stack);
     }
 
-    Move begin[10000], *end;
-    Move buffer;
 
-    end = generate_pseudolegal_moves(begin, board->meta.sideToMove, board);
+    Move begin[NUM_MOVES_MAX], *end;
+    Move sortedListBegin[NUM_MOVES_MAX], *sortedListEnd;
+    Move bestMove = 0;
+
 
 
     // check for position in transposition table
     Score lookupScore;
 
-    EvalType lookupType = transpos_lookup(board->hash, depthLeft, &lookupScore, bestMoveBuffer);
+    EvalType lookupType = transpos_lookup(board->hash, depthLeft, &lookupScore, &bestMove);
 
-    switch (lookupType) {
-
-    case EXACT:
-        // TODO: check if pseudolegal move to avoid hash key collisions
-        return lookupScore;
-
-    case ALPHA:
-        if (alpha >= lookupScore /*>= real score*/) return alpha;
-        break;
-
-    case BETA:
-        if (beta <= lookupScore /*<= real score*/) return beta;
-        break;
-
-    case NO_ENTRY:;
-        // calculate
-
+    // if bounds are enough return them
+    if (lookupType == ALPHA && alpha >= lookupScore) {
+        return alpha;
+    }
+    if (lookupType == BETA && beta <= lookupScore) {
+        return beta;
     }
 
 
 
-    for (Move *move = begin; move != end; ++move) {
+    end = generate_pseudolegal_moves(begin, board->meta.sideToMove, board);
+
+    if (lookupType == EXACT) {
+        // check if pseudolegal move to avoid hash key collisions
+        for (Move *move = begin; move != end; ++move) {
+            if (*move == bestMove) {
+                if (lookupScore < alpha) {
+                    return alpha;
+                }
+                if (lookupScore >= beta) {
+                    return beta;
+                }
+                return lookupScore;
+            }
+        }
+    }
+
+    bestMove = 0; // 0 is invalid move, if it stays 0 no changes were made
+
+    // MOVE-ORDERING
+    sortedListEnd = sort_move_list(begin, end, sortedListBegin, depthLeft, pv, board, stack);
+
+
+    short isPVsearch = 1; // boolean to signal principal variation
+
+    for (Move *move = sortedListBegin; move != sortedListEnd; ++move) {
 
         make_move(board, *move, stack);
 
     // MAYBE NOT NECESSARY TO CHECK FOR KING IN CHECK
     if (attacks_to_king(board, !(board->meta.sideToMove)) == 0ll) {
 
-        Score current = -alphaBeta(-beta, -alpha, depthLeft - 1, board, stack, &buffer);
+        Score current;
+
+        if (isPVsearch) {
+            // do full search
+            current = -alphaBeta(-beta, -alpha, depthLeft - 1, board, stack, pv);
+            isPVsearch = 0;
+        }
+        else {
+            // do zero window search
+            current = -alphaBeta(-alpha-1, -alpha, depthLeft - 1, board, stack, pv);
+            
+            if (current > alpha) {
+                // if failed high, do full re-search
+                current = -alphaBeta(-beta, -alpha, depthLeft - 1, board, stack, pv);
+            }
+        }
+        
 
         if (current >= beta) {
             unmake_move(board, *move, stack);
@@ -63,10 +114,9 @@ Score alphaBeta(Score alpha, Score beta, int depthLeft, Board *board, Stack *sta
 
         if (current > alpha) {
             alpha = current;
-            *bestMoveBuffer = *move;
-            // if this happens at least once, exact node
-            // if not, alpha node [upper bound]
-            // this is signalled by bestMove = 0
+            bestMove = *move;
+            // store the new PV move
+            pv->root[pv->depth - depthLeft] = bestMove;
         }
     }
 
@@ -76,13 +126,13 @@ Score alphaBeta(Score alpha, Score beta, int depthLeft, Board *board, Stack *sta
 
     // if ([replacement_logic]) :
 
-    if (*bestMoveBuffer == 0) {
+    if (bestMove == 0) {
         // alpha node
         transpos_save(board->hash, depthLeft, ALPHA, alpha, 0);
     }
     else {
         // exact node
-        transpos_save(board->hash, depthLeft, EXACT, alpha, *bestMoveBuffer);
+        transpos_save(board->hash, depthLeft, EXACT, alpha, bestMove);
     }
 
 
@@ -103,7 +153,7 @@ Score quiesce(Score alpha, Score beta, Board *board, Stack *stack) {
         alpha = standPat;
     }
 
-    Move begin[10000], *end;
+    Move begin[NUM_MOVES_MAX], *end;
 
     end = generate_pseudolegal_moves(begin, board->meta.sideToMove, board);
 
@@ -147,5 +197,92 @@ Score quiesce(Score alpha, Score beta, Board *board, Stack *stack) {
 }
 
 
+
+
+static Move *sort_move_list(Move *moveListBegin, Move *moveListEnd, Move *sortedListBegin,
+                                        int depthLeft, PrincipalVariation *pv, Board *board, Stack *stack) {
+
+    Move *it = sortedListBegin;
+    short visited[NUM_MOVES_MAX] = {0};
+
+    // I. principal variation
+
+    Move pvMove = pv->root[pv->depth - depthLeft];
+    Score scoreBuffer;
+    Move moveBuffer;
+
+    for (Move *move = moveListBegin; move != moveListEnd; ++move) {
+        if (*move == pvMove) {
+            *it++ = *move;
+            visited[(int)(move - moveListBegin)] = 1;
+        }
+    }
+
+    // II. hash moves
+    for (Move *move = moveListBegin; move != moveListEnd; ++move) {
+
+        if (visited[(int)(move - moveListBegin)]) {
+            continue;
+        }
+
+        make_move(board, *move, stack);
+
+        if (transpos_lookup(board->hash, depthLeft, &scoreBuffer, &moveBuffer) != NO_ENTRY) {
+            *it++ = *move;
+            visited[(int)(move - moveListBegin)] = 1;
+        }
+
+        unmake_move(board, *move, stack);
+
+    }
+
+    // III. captures with SEE > 0
+
+    for (Move *move = moveListBegin; move != moveListEnd; ++move) {
+
+        if (visited[(int)(move - moveListBegin)]) {
+            continue;
+        }
+
+        if ((*move & captureFlag) &&
+                    capture_static_evaluation(get_from(*move), get_to(*move), board, stack) >= 0) {
+            *it++ = *move;
+            visited[(int)(move - moveListBegin)] = 1;
+        }
+
+    }
+
+    // IV. captures with SEE = 0
+
+    for (Move *move = moveListBegin; move != moveListEnd; ++move) {
+
+        if (visited[(int)(move - moveListBegin)]) {
+            continue;
+        }
+
+        if ((*move & captureFlag) &&
+                    capture_static_evaluation(get_from(*move), get_to(*move), board, stack) == 0) {
+            *it++ = *move;
+            visited[(int)(move - moveListBegin)] = 1;
+        }
+
+    }
+
+    // V. other moves
+
+    for (Move *move = moveListBegin; move != moveListEnd; ++move) {
+
+        if (visited[(int)(move - moveListBegin)]) {
+            continue;
+        }
+
+        *it++ = *move;
+        visited[(int)(move - moveListBegin)] = 1;
+    }
+
+
+    return it;
+
+}
 
 

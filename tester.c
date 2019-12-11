@@ -1,14 +1,18 @@
 #include "debugger_functions.c"
 #include "search.h"
 #include "transposition.h"
+#include <stdlib.h>
+#include <string.h>
 
 // driver
 int main() {
 
 //    RUN PERFT:
-//    perft_check();
+    perft_check();
 
-//    eval_testing();
+    transpos_init();
+
+    eval_testing();
 
     transpos_init();
 
@@ -17,8 +21,14 @@ int main() {
 
 //    EVALUATE A POSITION WITH A SIMPLE ALPHA BETA SEARCH IN DEPTH 6
     Move bestMove;
-    printf("position score: %.2f (relative to side to move)\n", (double)alphaBeta(-30000, +30000, 6, &board, &stack, &bestMove) / 100.);
-    print_move(bestMove, board.pieceCode[get_from(bestMove)]);
+    PrincipalVariation pv;
+    pv.depth = 0;
+    memset(pv.root, 0, 512);
+    Score score = iterate(&board, &stack, &pv);
+    printf("score = %.2f\n", (double)score/100.);
+    for (int i = 0; i < 10; i++) {
+        print_move(pv.root[i], board.pieceCode[get_from(pv.root[i])]);
+    }
 
     return 0;
 }
