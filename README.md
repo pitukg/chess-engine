@@ -2,7 +2,7 @@
 
 This is a chess engine I have been developing in my free time.
 
-Currently, it has a working move generation, and is capable to analyse a given position with a relatively simple alpha-beta search and a very basic evaluation function.
+Currently, it has a working move generation, and is capable to analyse a given position with an alpha-beta variant iterative deepening principal variation search and a basic evaluation function.
 
 I have adopted ideas from the website [Chess Programming WIKI](https://www.chessprogramming.org/Main_Page), but not actual code.
 
@@ -84,7 +84,7 @@ So far the evaluation function is the identical to the one found on chessprogram
 
 ## Search
 
-An **iterative deepening principal variation search** is implemented, building on the basic concept of alpha-beta search. To stabilise evaluation *quescent search* is used with static exchange evaluation (SEE). The engine uses a 32-bit transposition table with *Zobrist* hash keys: this meant about 40% improvement in speed.
+An **iterative deepening principal variation search** is implemented, building on the basic concept of alpha-beta search. To stabilise evaluation *quiescent search* is used with static exchange evaluation (SEE). The engine uses a 32-bit transposition table with *Zobrist* hash keys: this meant about 40% improvement in speed.
 
 ## Future
 
