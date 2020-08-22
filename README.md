@@ -88,4 +88,4 @@ An **iterative deepening principal variation search** is implemented, building o
 
 ## Future
 
-In the future I am planning to implement the **Universal Chess Interface (UCI)** to communicate with GUIs. Also, repetition detection and enforcing the 50 move rule are missing yet, and of course once the engine is functioning reasonably we can make adjustments to move orderings, the evaluation function and dwelve into time management, opening books and endgame tables.
+In the future I am planning to implement the **Universal Chess Interface (UCI)** to communicate with GUIs. Also, repetition detection and enforcing the 50 move rule are missing yet, and of course once the engine is functioning reasonably we can make adjustments to move orderings, the evaluation function and delve into time management, opening books and endgame tables.
